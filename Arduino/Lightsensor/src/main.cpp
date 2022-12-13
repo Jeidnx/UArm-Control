@@ -1,55 +1,29 @@
 #include <Arduino.h>
 
-PROGMEM const int ROWS = 5;
+int pins[] = { 53, 51, 49, 47, 45, 43, 41, 39, 38, 37, 36, 35, 34, 33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, };
 
-PROGMEM const int COLUMNS = 5;
+int ROWS = 5;
 
-int pins[] = {
-        22,
-        23,
-        24,
-        25,
-        26,
-        27,
-        28,
-        29,
-        30,
-        31,
-        32,
-        33,
-        34,
-        35,
-        36,
-        37,
-        38,
-        39,
-        //40,
-        41,
-        //42,
-        43,
-        //44,
-        45,
-        //46,
-        47,
-        //48,
-        49,
-        //50,
-        51,
-        //52,
-        53
-};
-void setup() {
+int COLUMNS = 5;
 
+void setup(){
     for (int pin: pins){
         pinMode(pin, INPUT);
     }
     Serial.begin(9600);
-    Serial.println("Press any key to start calibration");
 }
 
 void loop(){
-    if(Serial.available() > 0){
-        Serial.read();
+    while (Serial.available() <= 0){}
+    String command = Serial.readString();
+    if(command == "g") {
+        for(int pin: pins){
+            Serial.print(1 - digitalRead(pin));
+            Serial.print(" ");
+        }
+        Serial.println();
+    }
+    if(command == "c"){
         int binding[ROWS][COLUMNS];
         for (int i = 1; i <= ROWS; ++i) {
             for (int j = 1; j <= COLUMNS; ++j) {
@@ -61,13 +35,19 @@ void loop(){
                 while(Serial.available() < 1){
                     delay(500);
                 }
+                bool hasTriggered = false;
                 for (int pin: pins){
                     if(digitalRead(pin) == 0){
+                        if(hasTriggered){
+                            Serial.println("Mehrere pins wurden aktiviert. Bitte erneut versuchen");
+                            j--;
+                            break;
+                        }
                         Serial.print("\nPin ");
                         Serial.println(pin);
                         Serial.print("\n");
                         binding[i - 1][j - 1] = pin;
-                        continue;
+                        hasTriggered = true;
                     }
                 }
                 Serial.read();
@@ -75,15 +55,19 @@ void loop(){
             Serial.println();
         }
         Serial.println("Pin layout: ");
+        String configString = "int pins[] = { ";
         for(int row = 0; row < ROWS; row++){
             for(int column = 0; column < COLUMNS; column++){
-                Serial.print(binding[row][column]);
+                int pin = binding[row][column];
+                Serial.print(pin);
                 Serial.print("  ");
+                configString += pin;
+                configString += ", ";
             }
             Serial.println();
         }
-
-        Serial.println("\n");
+        configString += "};";
+        Serial.println("Use this config String: ");
+        Serial.println(configString);
     }
-
 }
