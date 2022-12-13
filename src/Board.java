@@ -2,8 +2,8 @@
 
 public class Board {
 
-    private static int ROWS = 5;
-    private static int COLUMNS = 5;
+    private final int rows;
+    private final int columns;
 
     // Board coordinates
     private static double MINX = 152;
@@ -16,6 +16,8 @@ public class Board {
     private static int BOARDHEIGHT = 58;
 
     private final UArm arm;
+    private final Serial sensorSerial;
+    private final Lightsensor sensorGrid;
     private final double homeX;
     private final double homeY;
     private final double stepsizeX;
@@ -23,23 +25,32 @@ public class Board {
 
     private boolean pumpStatus = false;
 
-    public Board(UArm arm) {
+    public Board(UArm arm, String lightsensorPort, int rows, int columns) {
        this.arm = arm;
+       this.sensorSerial = new Serial(lightsensorPort, 9600, 8, 1, Serial.PARITY_NONE);
+       if(!this.sensorSerial.open()){
+           System.out.println("Konnte nicht mit Arduino auf Port: " + lightsensorPort + " verbinden.");
+           System.exit(1);
+       }
+       this.sensorGrid = new Lightsensor(rows, columns);
+       this.rows = rows;
+       this.columns = columns;
        double lengthX = (MAXX - MINX);
        double lengthY = (MAXY - MINY);
 
        this.homeX = lengthX / 2 + MINX;
        this.homeY = lengthY / 2 + MINY;
-       this.stepsizeX = lengthX / (ROWS -1 );
-       this.stepsizeY = lengthY / (COLUMNS -1 );
+       this.stepsizeX = lengthX / (rows -1 );
+       this.stepsizeY = lengthY / (columns -1 );
     }
 
     public String move(int row, int column){
-        if(row < 1 || row > ROWS || column < 1 || column > COLUMNS){
+        if(row < 1 || row > rows || column < 1 || column > columns){
             throw new Error("Move outside of Board bounding.");
         }
         double xpos = (stepsizeX * (row - 1)) + MINX;
         double ypos = (stepsizeY * (column - 1)) + MINY;
+        arm.moveHeight(TRAVELHEIGHT);
        return arm.move(xpos, ypos, TRAVELHEIGHT);
     }
 
@@ -57,7 +68,7 @@ public class Board {
     }
 
     public String dropOrPickup(){
-        arm.height(BOARDHEIGHT);
+        arm.moveHeight(BOARDHEIGHT);
         if(pumpStatus){
             // Drop
             this.arm.setPumpStatus(false);
@@ -67,7 +78,7 @@ public class Board {
             this.arm.setPumpStatus(true);
             this.pumpStatus = true;
         }
-        return arm.height(TRAVELHEIGHT);
+        return arm.moveHeight(TRAVELHEIGHT);
     }
 
 }
