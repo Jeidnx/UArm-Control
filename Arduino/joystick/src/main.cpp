@@ -3,6 +3,8 @@
 int XAXIS = A0;
 int YAXIS = A1;
 int BUTTON = 8;
+int ulimit = 700;
+int dlimit = 300;
 
 
 void setup() {
@@ -13,16 +15,39 @@ void setup() {
 }
 
 void loop() {
-    /* for (int i = 3; i < 12; i++){
-        Serial.print("Port: ");
-        Serial.print(i);
-        Serial.print(" :: ");
-        Serial.println(digitalRead(i));
-    }*/
-    Serial.print(1 - digitalRead(BUTTON));
-    Serial.print(" ");
-    Serial.print(analogRead(XAXIS));
-    Serial.print(" ");
-    Serial.println(analogRead(YAXIS));
-    delay(1000);
+    if(digitalRead(BUTTON) == 0){
+        Serial.println("b");
+        delay(250);
+        while(digitalRead(BUTTON) == 0){
+            delay(250);
+        }
+    }
+    if(analogRead(XAXIS) > ulimit){
+        Serial.println("r");
+        delay(250);
+        while(analogRead(XAXIS) > ulimit){
+            delay(250);
+        }
+    }
+    if(analogRead(XAXIS) < dlimit){
+        Serial.println("l");
+        delay(250);
+        while(analogRead(XAXIS) < dlimit){
+            delay(250);
+        }
+    }
+    if(analogRead(YAXIS) > ulimit){
+        Serial.println("u");
+        delay(250);
+        while(analogRead(YAXIS) > ulimit){
+            delay(250);
+        }
+    }
+    if(analogRead(YAXIS) < dlimit){
+        Serial.println("d");
+        delay(250);
+        while(analogRead(YAXIS) < dlimit){
+            delay(250);
+        }
+    }
 }
