@@ -20,15 +20,12 @@ public class Board {
     private final double stepsizeY;
 
     private boolean pumpStatus = false;
+    // Length of two. ROW and COLUMN Values
+    private final int[] coords;
 
     public Board(UArm arm, int rows, int columns) {
        this.arm = arm;
-       this.sensorSerial = new Serial(lightsensorPort, 9600, 8, 1, Serial.PARITY_NONE);
-       if(!this.sensorSerial.open()){
-           System.out.println("Konnte nicht mit Arduino auf Port: " + lightsensorPort + " verbinden.");
-           System.exit(1);
-       }
-       this.sensorGrid = new Lightsensor(rows, columns);
+       this.coords = new int[2];
        this.rows = rows;
        this.columns = columns;
        double lengthX = (MAXX - MINX);
@@ -37,41 +34,86 @@ public class Board {
        this.stepsizeY = lengthY / (columns -1 );
     }
 
-    public String move(int row, int column){
-        if(row < 1 || row > rows || column < 1 || column > columns){
+    public void move(int row, int column){
+        if(row < 0 || row >= rows || column < 0 || column >= columns){
             throw new Error("Move outside of Board bounding.");
         }
-        double xpos = (stepsizeX * (row - 1)) + MINX;
-        double ypos = (stepsizeY * (column - 1)) + MINY;
+        double xpos = (stepsizeX * (row)) + MINX;
+        double ypos = (stepsizeY * (column)) + MINY;
         arm.moveHeight(TRAVELHEIGHT);
-       return arm.move(xpos, ypos, TRAVELHEIGHT);
+        this.coords[0] = row;
+        this.coords[1] = column;
+        arm.move(xpos, ypos, TRAVELHEIGHT);
     }
 
-    public String moveRelative(int row, int column){
-        double xmove = row * stepsizeX;
-        double ymove = column * stepsizeY;
-
-        System.out.println("Moving to:");
-        System.out.println(xmove);
-        System.out.println(ymove);
-        return arm.moveRelative((int)xmove, (int)ymove,0);
+    public boolean moveRelative(int row, int column){
+        int newRow = this.coords[0] + row;
+        int newColumn = this.coords[1] + column;
+        if(newRow < 0 || newRow >= rows || newColumn < 0 || newColumn >= columns){
+            moveRelativeNotAllowed(row, column);
+            return false;
+        }
+        this.coords[0] = newRow;
+        this.coords[1] = newColumn;
+        move(this.coords[0], this.coords[1]);
+        return true;
     }
     public void moveHome(){
-        this.arm.move(homeX, homeY, TRAVELHEIGHT);
+        this.coords[0] = 2;
+        this.coords[1] = 2;
+        this.move(2, 2);
+    }
+    public void moveAway(){
+        this.arm.moveHeight(TRAVELHEIGHT);
+        this.arm.move(80, 110, TRAVELHEIGHT);
     }
 
-    public String dropOrPickup(){
-        arm.moveHeight(BOARDHEIGHT);
+    public void moveRelativeNotAllowed(int row, int column){
+        double xmove = row * stepsizeX * 0.25;
+        double ymove = column * stepsizeY * 0.25;
+        this.arm.moveRelative((int)xmove, (int)ymove, 0);
+        this.arm.moveRelative(-(int)xmove, -(int)ymove, 0);
+
+    }
+
+    public boolean pickup(){
         if(pumpStatus){
-            // Drop
-            this.arm.setPumpStatus(false);
-            this.pumpStatus = false;
-        } else {
-            // Pickup
-            this.arm.setPumpStatus(true);
-            this.pumpStatus = true;
+            return false;
         }
-        return arm.moveHeight(TRAVELHEIGHT);
+        arm.moveHeight(BOARDHEIGHT);
+        this.arm.setPumpStatus(true);
+        this.pumpStatus = true;
+        arm.moveHeight(TRAVELHEIGHT);
+        return true;
+    }
+    public void pickupNotAllowed(){
+        if(pumpStatus){
+            return;
+        }
+        arm.moveHeight(TRAVELHEIGHT - ((TRAVELHEIGHT - BOARDHEIGHT) / (float)2));
+        arm.moveHeight(TRAVELHEIGHT);
+    }
+
+    public boolean drop(){
+        if(!pumpStatus){
+            return false;
+        }
+        arm.moveHeight(BOARDHEIGHT);
+        FutureHelper.waitMillis(500);
+        this.arm.setPumpStatus(false);
+        this.pumpStatus = false;
+        arm.moveHeight(TRAVELHEIGHT);
+        return true;
+    }
+
+    public boolean getPumpStatus(){
+        return this.pumpStatus;
+    }
+    public int[] getCoords(){
+        int[] newA = new int[2];
+        newA[0] = this.coords[0];
+        newA[1] = this.coords[1];
+        return newA;
     }
 
 }
