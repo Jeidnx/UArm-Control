@@ -1,3 +1,5 @@
+import java.util.LinkedList;
+
 public class Muehle {
     private final int size;
 
@@ -18,7 +20,7 @@ public class Muehle {
         this.placeCounter = 0;
         this.state = State.ANGEHALTEN;
         this.size = size;
-        this.grid = new Spieler[5][5];
+        this.grid = new Spieler[size][size];
         this.amZug = Spieler.KEINER;
         for(int x = 0; x < size; x++){
             for(int y = 0; y < size; y++){
@@ -40,8 +42,10 @@ public class Muehle {
         if(this.placeCounter == 10){
             this.state = State.LAEUFT;
         }
+        this.pruefeGewinner();
         return true;
     }
+
     public boolean bewegeStein(int xOrig, int yOrig, int xNeu, int yNeu){
         if(this.state != State.LAEUFT){
             return false;
@@ -54,7 +58,6 @@ public class Muehle {
         }
         boolean xValid = (xOrig == (xNeu + 1)) || (xOrig == (xNeu -1));
         boolean yValid = (yOrig == (yNeu + 1)) || (yOrig == (yNeu -1));
-        System.out.println("xValid: " + xValid + " yValid: " + yValid);
         if(xValid^yValid){
             this.grid[xOrig][yOrig] = Spieler.KEINER;
             this.grid[xNeu][yNeu] = this.amZug;
@@ -72,62 +75,49 @@ public class Muehle {
     }
 
     private void pruefeGewinner(){
-        //TODO: implement diagonal win
-
-        Spieler horizontalWinner = Spieler.KEINER;
-        int counter = 0;
-        Spieler sp = Spieler.KEINER;
-        outer:for(int y = 0; y < size; y++){
-            for(int x = 0; x < size; x++){
-                Spieler tsp = this.grid[x][y];
-                if(tsp == Spieler.KEINER){
-                    counter = 0;
-                    continue;
-                }
-                if(tsp == sp){
-                    counter++;
-                    if(counter == 5){
-                        horizontalWinner = sp;
-                        break outer;
-                    }
-                }else{
-                    sp = tsp;
-                    counter = 1;
-                }
-            }
-        }
-        Spieler verticalWinner = Spieler.KEINER;
-        outer:for(int x = 0; x < size; x++){
-            for(int y = 0; y < size; y++){
-                Spieler tsp = this.grid[x][y];
-                if(tsp == Spieler.KEINER){
-                    counter = 0;
-                    continue;
-                }
-                if(tsp == sp){
-                    counter++;
-                    if(counter == 5){
-                        verticalWinner = sp;
-                        break outer;
-                    }
-                }else{
-                    sp = tsp;
-                    counter = 1;
-                }
-            }
-        }
-        if(horizontalWinner != Spieler.KEINER){
-            this.gewinner = horizontalWinner;
-            this.state = State.ANGEHALTEN;
+        if(pruefeGewinner(Spieler.BLAU)){
+            this.gewinner = Spieler.BLAU;
             this.amZug = Spieler.KEINER;
-        }
-
-        if(verticalWinner != Spieler.KEINER){
-            this.gewinner = verticalWinner;
             this.state = State.ANGEHALTEN;
+            return;
+        }
+        if(pruefeGewinner(Spieler.GOLD)){
+            this.gewinner = Spieler.GOLD;
             this.amZug = Spieler.KEINER;
+            this.state = State.ANGEHALTEN;
         }
     }
+    public boolean pruefeGewinner(Spieler player){
+
+        for (int j = 0; j<this.size-4 ; j++ ){
+            for (int i = 0; i<this.size; i++){
+                if (this.grid[i][j] == player && this.grid[i][j+1] == player && this.grid[i][j+2] == player && this.grid[i][j+3] == player && this.grid[i][j+4] == player){
+                    return true;
+                }
+            }
+        }
+        for (int i = 0; i<this.size-4 ; i++ ){
+            for (int j = 0; j<this.size; j++){
+                if (this.grid[i][j] == player && this.grid[i+1][j] == player && this.grid[i+2][j] == player && this.grid[i+3][j] == player && this.grid[i+4][j] == player){
+                    return true;
+                }
+            }
+        }
+        for (int i=4; i<this.size; i++){
+            for (int j=0; j<this.size-4; j++){
+                if (this.grid[i][j] == player && this.grid[i-1][j+1] == player && this.grid[i-2][j+2] == player && this.grid[i-3][j+3] == player && this.grid[i-4][j+4] == player)
+                    return true;
+            }
+        }
+        for (int i=4; i<this.size; i++){
+            for (int j=4; j<this.size; j++){
+                if (this.grid[i][j] == player && this.grid[i-1][j-1] == player && this.grid[i-2][j-2] == player && this.grid[i-3][j-3] == player && this.grid[i-4][j-4] == player)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     public String getAnweisung(){
         return switch (this.state){
             case ANGEHALTEN -> "Das Spiel muss erst gestartet werden, bevor ein Zug gemacht werden kann.";
@@ -135,7 +125,7 @@ public class Muehle {
             case LAEUFT -> "Spieler '" + this.amZug + "' darf einen Stein verschieben.";
         };
     }
-    private void starteSpiel(){
+    public void starteSpiel(){
         this.gewinner = Spieler.KEINER;
         this.placeCounter = 0;
         this.state = State.STARTEN;
@@ -145,11 +135,24 @@ public class Muehle {
     public boolean isPlaying(){
         return this.state != State.ANGEHALTEN;
     }
-    public Spieler getSpieler(int x, int y){
-        if(x < 0 || x > size || y < 0 || y > size){
-            throw new Error("getSpieler() darf nur Zahlen zwischen 0 und " + size + " erhalten.");
+    public int[][] getAllowedCoords(Spieler sp){
+        LinkedList<int[]> coords = new LinkedList<>();
+        for(int x = 0; x < size; x++){
+            for(int y = 0; y < size; y++){
+                if(this.grid[x][y] == sp){
+                    coords.add(new int[]{x, y});
+                }
+            }
         }
-        return this.grid[x][y];
+
+        int matches = coords.size();
+        int[][] re = new int[matches][2];
+
+        for(int i = 0; i < matches; i++){
+            re[i] = new int[] {coords.get(i)[0], coords.get(i)[1]};
+        }
+
+        return re;
     }
     public State getState(){
         return this.state;
@@ -163,12 +166,12 @@ public class Muehle {
         sb.append("Am zug:\t").append(this.amZug).append("\n");
         sb.append("  \t");
         for(int i = 0; i < size; i++){
-            sb.append("X").append(i).append("\t");
+            sb.append("Y").append(i).append("\t");
         }
         sb.append("\n");
-        for(int y = 0; y < size; y++){
-            sb.append("Y").append(y).append("\t");
-            for(int x = 0; x < size; x++){
+        for(int x = 0; x < size; x++){
+            sb.append("X").append(x).append("\t");
+            for(int y = 0; y < size; y++){
                 //sb.append(x).append(y);
                 sb.append(switch (this.grid[x][y]){
                     case BLAU -> "[B]\t";
@@ -181,5 +184,8 @@ public class Muehle {
         sb.append("----------");
 
         return sb.toString();
+    }
+    public Spieler getAmZug(){
+        return this.amZug;
     }
 }
