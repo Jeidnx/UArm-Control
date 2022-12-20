@@ -16,16 +16,12 @@ public class Board {
     private static int BOARDHEIGHT = 58;
 
     private final UArm arm;
-    private final Serial sensorSerial;
-    private final Lightsensor sensorGrid;
-    private final double homeX;
-    private final double homeY;
     private final double stepsizeX;
     private final double stepsizeY;
 
     private boolean pumpStatus = false;
 
-    public Board(UArm arm, String lightsensorPort, int rows, int columns) {
+    public Board(UArm arm, int rows, int columns) {
        this.arm = arm;
        this.sensorSerial = new Serial(lightsensorPort, 9600, 8, 1, Serial.PARITY_NONE);
        if(!this.sensorSerial.open()){
@@ -37,9 +33,6 @@ public class Board {
        this.columns = columns;
        double lengthX = (MAXX - MINX);
        double lengthY = (MAXY - MINY);
-
-       this.homeX = lengthX / 2 + MINX;
-       this.homeY = lengthY / 2 + MINY;
        this.stepsizeX = lengthX / (rows -1 );
        this.stepsizeY = lengthY / (columns -1 );
     }
